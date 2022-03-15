@@ -5,11 +5,20 @@ set -e # exit on errors
 
 ORG=$1
 PACKAGE=$2
-if [[ -z "$ORG" || -z "$PACKAGE" ]]; then
-    echo No arguments provided, please pass the org name and project name as the first and second arguments
+EXECUTABLE=$3
+if [[ -z "$ORG" || -z "$PACKAGE" || -z "$EXECUTABLE" ]]; then
+    echo No arguments provided, please pass the org, repo and executable name as the first, second and third arguments
     exit 1
 fi
-shift 2
+
+shift 3
+
+if command -v $EXECUTABLE &> /dev/null; then
+    command -v $EXECUTABLE
+    $EXECUTABLE $*
+    exit
+fi
+command -v $EXECUTABLE
 
 case "$(uname)" in
     "Darwin")
@@ -54,4 +63,4 @@ if [ "$OS" = "windows" ]; then
 else
     tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
 fi
-$TEMP/$PACKAGE-$VERSION/$PACKAGE $*
+$TEMP/$PACKAGE-$VERSION/$EXECUTABLE $*
