@@ -1,15 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 # Copied and modified https://github.com/ndmitchell/neil/blob/6c5a2d5d5f5a5d8fde2de63794ab5da216aa4364/misc/run.sh
 
 set -e # exit on errors
 
 ORG=$1
 PACKAGE=$2
-if [[ -z "$ORG" || -z "$PACKAGE" ]]; then
-    echo No arguments provided, please pass the org name and project name as the first and second arguments
+EXECUTABLE=$3
+if [[ -z "$ORG" || -z "$PACKAGE" || -z "$EXECUTABLE" ]]; then
+    echo No arguments provided, please pass the org, repo and executable name as the first, second and third arguments
     exit 1
 fi
-shift 2
+
+shift 3
+
+if command -v $EXECUTABLE &> /dev/null; then
+    $EXECUTABLE $*
+    exit
+fi
 
 case "$(uname)" in
     "Darwin")
@@ -54,4 +61,4 @@ if [ "$OS" = "windows" ]; then
 else
     tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
 fi
-$TEMP/$PACKAGE-$VERSION/$PACKAGE $*
+$TEMP/$PACKAGE-$VERSION/$EXECUTABLE $*
