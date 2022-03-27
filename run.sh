@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copied and modified https://github.com/ndmitchell/neil/blob/6c5a2d5d5f5a5d8fde2de63794ab5da216aa4364/misc/run.sh
 
 set -e # exit on errors
