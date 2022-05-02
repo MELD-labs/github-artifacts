@@ -6,59 +6,75 @@ set -e # exit on errors
 ORG=$1
 PACKAGE=$2
 EXECUTABLE=$3
-if [[ -z "$ORG" || -z "$PACKAGE" || -z "$EXECUTABLE" ]]; then
-    echo No arguments provided, please pass the org, repo and executable name as the first, second and third arguments
-    exit 1
+VERSION=$4
+
+if [[ -z "$ORG" || -z "$PACKAGE" || -z "$EXECUTABLE" || -z "$VERSION" ]]; then
+  echo No arguments provided, please pass the org, repo, executable name and version as the first, second, third and fourth arguments
+  exit 1
 fi
 
-shift 3
+shift 4
 
-if command -v $EXECUTABLE &> /dev/null; then
+if command -v $EXECUTABLE &>/dev/null; then
+  if $EXECUTABLE --version | grep -q "\bv\?${VERSION//\./\\.}"; then
     $EXECUTABLE $*
     exit
+  else
+    echo "$EXECUTABLE has mismatched version, needs $VERSION"
+  fi
+else
+  echo "$EXECUTABLE is not available"
 fi
 
 case "$(uname)" in
-    "Darwin")
-        OS=osx;;
-    MINGW64_NT-*|MSYS_NT-*)
-        OS=windows;;
-    *)
-        OS=linux
+"Darwin")
+  OS=osx
+  ;;
+MINGW64_NT-* | MSYS_NT-*)
+  OS=windows
+  ;;
+*)
+  OS=linux
+  ;;
 esac
 
 if [ "$OS" = "windows" ]; then
-    EXT=.zip
-    ESCEXT=\.zip
+  EXT=.zip
+  ESCEXT=\.zip
 else
-    EXT=.tar.gz
-    ESCEXT=\.tar\.gz
+  EXT=.tar.gz
+  ESCEXT=\.tar\.gz
 fi
 
-echo Downloading and running $ORG/$PACKAGE...
+echo "Downloading $ORG/$PACKAGE @ $VERSION..."
+
 # Don't go for the API since it hits the Appveyor GitHub API limit and fails
-RELEASES=$(curl --silent --show-error https://github.com/$ORG/$PACKAGE/releases)
-URL=https://github.com/$(echo $RELEASES | grep -o '\"[^\"]*-x86_64-'$OS$ESCEXT'\"' | sed s/\"//g | head -n1)
-VERSION=$(echo $URL | sed -n 's@.*-\(.*\)-x86_64-'$OS$ESCEXT'@\1@p')
+ALL_RELEASES=$(curl --silent --show-error https://github.com/$ORG/$PACKAGE/releases)
+RELEASE=$(echo $ALL_RELEASES | grep -o '\"[^\"]*-'$VERSION'-x86_64-'$OS$ESCEXT'\"' | sed s/\"//g | head -n1)
+if [ -z "$RELEASE" ]; then
+  echo "Release $VERSION not found in $ORG/$PACKAGE"
+  exit 1
+fi
+URL="https://github.com/$RELEASE"
+
 TEMP=$(mktemp -d .$PACKAGE-XXXXXX)
 
-cleanup(){
-    rm -r $TEMP
-}
-trap cleanup EXIT
+trap "rm -rf $TEMP" EXIT
 
-retry(){
-    ($@) && return
-    sleep 15
-    ($@) && return
-    sleep 15
-    $@
+retry() {
+  ($@) && return
+  sleep 15
+  ($@) && return
+  sleep 15
+  $@
 }
 
 retry curl --progress-bar --location -o$TEMP/$PACKAGE$EXT $URL
 if [ "$OS" = "windows" ]; then
-    7z x -y $TEMP/$PACKAGE$EXT -o$TEMP -r > /dev/null
+  7z x -y $TEMP/$PACKAGE$EXT -o$TEMP -r >/dev/null
 else
-    tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
+  tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
 fi
-$TEMP/$PACKAGE-$VERSION/$EXECUTABLE $*
+
+EXECUTABLE_DIR=$TEMP/$PACKAGE-$(echo $RELEASE | sed -n 's@.*-\(.*\)-x86_64-'$OS$ESCEXT'@\1@p')
+$EXECUTABLE_DIR/$EXECUTABLE $*
