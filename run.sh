@@ -5,11 +5,11 @@ set -e # exit on errors
 
 ORG=$1
 PACKAGE=$2
-EXECUTABLE=$3
-VERSION=$4
+VERSION=$3
+SUFFIX=$4
 
-if [[ -z "$ORG" || -z "$PACKAGE" || -z "$EXECUTABLE" || -z "$VERSION" ]]; then
-  echo No arguments provided, please pass the org, repo, executable name and version as the first, second, third and fourth arguments
+if [[ -z "$ORG" || -z "$PACKAGE" || -z "$VERSION" || -z "$SUFFIX" ]]; then
+  echo No arguments provided, please pass the org, repo, version and hosted file suffix as the arguments.
   exit 1
 fi
 
@@ -28,34 +28,27 @@ fi
 
 case "$(uname)" in
 "Darwin")
-  OS=osx
+  export OS=osx
   ;;
 MINGW64_NT-* | MSYS_NT-*)
-  OS=windows
+  export OS=windows
   ;;
 *)
-  OS=linux
+  export OS=linux
   ;;
 esac
 
 if [ "$OS" = "windows" ]; then
-  EXT=.zip
-  ESCEXT=\.zip
+  export EXT=.zip
 else
-  EXT=.tar.gz
-  ESCEXT=\.tar\.gz
+  export EXT=.tar.gz
 fi
 
 echo "Downloading $ORG/$PACKAGE @ $VERSION..."
 
-# Don't go for the API since it hits the Appveyor GitHub API limit and fails
-ALL_RELEASES=$(curl --silent --show-error https://github.com/$ORG/$PACKAGE/releases)
-RELEASE=$(echo $ALL_RELEASES | grep -o '\"[^\"]*-'$VERSION'-x86_64-'$OS$ESCEXT'\"' | sed s/\"//g | head -n1)
-if [ -z "$RELEASE" ]; then
-  echo "Release $VERSION not found in $ORG/$PACKAGE"
-  exit 1
-fi
-URL="https://github.com/$RELEASE"
+EXPANDED_SUFFIX=$(envsubst <<< $SUFFIX)
+
+URL="https://github.com/$ORG/$PACKAGE/releases/download/v$VERSION/$PACKAGE-$VERSION$EXPANDED_SUFFIX"
 
 TEMP=$(mktemp -d .$PACKAGE-XXXXXX)
 
@@ -69,12 +62,19 @@ retry() {
   $@
 }
 
-retry curl --progress-bar --location -o$TEMP/$PACKAGE$EXT $URL
-if [ "$OS" = "windows" ]; then
-  7z x -y $TEMP/$PACKAGE$EXT -o$TEMP -r >/dev/null
+EXECUTABLE_DIR="$TEMP/$PACKAGE-$VERSION"
+
+if [[ $EXPANDED_SUFFIX == *$EXT ]]; then
+  retry curl --progress-bar --location -o$TEMP/$PACKAGE$EXT $URL
+  if [ "$OS" = "windows" ]; then
+    7z x -y $TEMP/$PACKAGE$EXT -o$TEMP -r >/dev/null
+  else
+    tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
+  fi
 else
-  tar -xzf $TEMP/$PACKAGE$EXT -C$TEMP
+  mkdir $EXECUTABLE_DIR
+  retry curl --progress-bar --location -o$EXECUTABLE_DIR/$PACKAGE $URL
+  chmod +x $EXECUTABLE_DIR/$PACKAGE
 fi
 
-EXECUTABLE_DIR=$TEMP/$PACKAGE-$(echo $RELEASE | sed -n 's@.*-\(.*\)-x86_64-'$OS$ESCEXT'@\1@p')
-$EXECUTABLE_DIR/$EXECUTABLE $*
+$EXECUTABLE_DIR/$PACKAGE $*
