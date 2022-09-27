@@ -15,15 +15,15 @@ fi
 
 shift 4
 
-if command -v $EXECUTABLE &>/dev/null; then
-  if $EXECUTABLE --version | grep -q "\bv\?${VERSION//\./\\.}"; then
-    $EXECUTABLE $*
+if command -v $PACKAGE &>/dev/null; then
+  if $PACKAGE --version | grep -q "\bv\?${VERSION//\./\\.}"; then
+    $PACKAGE $*
     exit
   else
-    echo "$EXECUTABLE has mismatched version, needs $VERSION"
+    echo "$PACKAGE has mismatched version, needs $VERSION"
   fi
 else
-  echo "$EXECUTABLE is not available"
+  echo "$PACKAGE is not available"
 fi
 
 case "$(uname)" in
