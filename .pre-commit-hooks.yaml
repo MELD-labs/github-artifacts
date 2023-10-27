@@ -1,21 +1,14 @@
 - id: hlint
   name: hlint
   description: HLint is a tool for suggesting possible improvements to Haskell code.
-  entry: run.sh ndmitchell hlint 3.5 '-x86_64-$OS$EXT'
-  language: script
-  files: '\.l?hs$'
-  stages: [commit]
-- id: hlint-ghc8
-  name: hlint-ghc8
-  description: HLint is a tool for suggesting possible improvements to Haskell code.
-  entry: run.sh ndmitchell hlint 3.4.1 '-x86_64-$OS$EXT'
+  entry: run.sh ndmitchell hlint 3.6.1 '-x86_64-$OS$EXT'
   language: script
   files: '\.l?hs$'
   stages: [commit]
 - id: fourmolu
   name: fourmolu
   description: Fourmolu is a formatter for Haskell source code.
-  entry: run.sh fourmolu fourmolu 0.8.2.0 '-$OS-x86_64' --check-idempotence --mode inplace
+  entry: run.sh fourmolu fourmolu 0.14.0.0 '-$OS-x86_64' --check-idempotence --mode inplace
   language: script
   files: '\.l?hs$'
   stages: [commit]
