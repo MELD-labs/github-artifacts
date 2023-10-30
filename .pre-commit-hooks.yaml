@@ -8,7 +8,7 @@
 - id: fourmolu
   name: fourmolu
   description: Fourmolu is a formatter for Haskell source code.
-  entry: run.sh fourmolu fourmolu 0.14.0.0 '-$OS-x86_64' --check-idempotence --mode inplace
+  entry: run.sh fourmolu fourmolu 0.11.0.0 '-$OS-x86_64' --check-idempotence --mode inplace
   language: script
   files: '\.l?hs$'
   stages: [commit]
